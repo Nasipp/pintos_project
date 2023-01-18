@@ -17,8 +17,7 @@ static int (*syscall_handlers[20]) (struct intr_frame *); /* Array of syscall fu
    UADDR must be below PHYS_BASE.
    Returns the byte value if successful, -1 if a segfault
    occurred. */
-static int
-get_user (const uint8_t *uaddr)
+static int get_user (const uint8_t *uaddr)
 {
   if(!is_user_vaddr(uaddr))
     return -1;
@@ -28,8 +27,7 @@ get_user (const uint8_t *uaddr)
   return result;
 }
 
-static bool
-put_user (uint8_t *udst, uint8_t byte)
+static bool put_user (uint8_t *udst, uint8_t byte)
 {
   if(!is_user_vaddr(udst))
     return false;
@@ -62,26 +60,23 @@ static bool is_valid_string(void * str)
 }
 
 
-static void
-syscall_exit (int status)
+
+static void syscall_exit (int status)
 {
   thread_exit (status);
 }
 
-static void
-syscall_halt(void)
+static void syscall_halt(void)
 {
   shutdown();
 }
 
-static pid_t
-syscall_exec(const char *file_name)
+static pid_t syscall_exec(const char *file_name)
 {
   return process_execute (file_name);
 }
 
-static int
-syscall_wait (pid_t pid)
+static int syscall_wait (pid_t pid)
 {
   return process_wait(pid);
 }
@@ -96,8 +91,7 @@ static bool syscall_remove (const char *file_name)
 }
 
 
-static int
-syscall_filesize_wrapper(struct intr_frame *f)
+static int syscall_filesize_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4)){
     return -1;
@@ -107,8 +101,7 @@ syscall_filesize_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_seek_wrapper(struct intr_frame *f)
+static int syscall_seek_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 8)){
     return -1;
@@ -119,8 +112,7 @@ syscall_seek_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_tell_wrapper(struct intr_frame *f)
+static int syscall_tell_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4)){
     return -1;
@@ -130,8 +122,7 @@ syscall_tell_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_create_wrapper(struct intr_frame *f)
+static int syscall_create_wrapper(struct intr_frame *f)
 {
   if (
     !is_valid_pointer(f->esp +4, 4) ||
@@ -145,8 +136,7 @@ syscall_create_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_remove_wrapper(struct intr_frame *f)
+static int syscall_remove_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4) || !is_valid_string(*(char **)(f->esp + 4))){
     return -1;
@@ -156,8 +146,7 @@ syscall_remove_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_open_wrapper(struct intr_frame *f)
+static int syscall_open_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4) || !is_valid_string(*(char **)(f->esp + 4))){
     return -1;
@@ -167,8 +156,7 @@ syscall_open_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_close_wrapper(struct intr_frame *f)
+static int syscall_close_wrapper(struct intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4)){
     return -1;
@@ -178,8 +166,7 @@ syscall_close_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_exit_wrapper(struct intr_frame *f)
+static int syscall_exit_wrapper(struct intr_frame *f)
 {
   int status;
   if (is_valid_pointer(f->esp + 4, 4))
@@ -190,15 +177,13 @@ syscall_exit_wrapper(struct intr_frame *f)
   return 0;
 }
 
-static int
-syscall_halt_wrapper(struct  intr_frame *f UNUSED)
+static int syscall_halt_wrapper(struct  intr_frame *f UNUSED)
 {
   syscall_halt();
   return 0;
 }
 
-static int
-syscall_wait_wrapper(struct  intr_frame *f)
+static int syscall_wait_wrapper(struct  intr_frame *f)
 {
   pid_t pid;
   if (is_valid_pointer(f->esp + 4, 4))
@@ -209,8 +194,7 @@ syscall_wait_wrapper(struct  intr_frame *f)
   return 0;
 }
 
-static int
-syscall_exec_wrapper(struct  intr_frame *f)
+static int syscall_exec_wrapper(struct  intr_frame *f)
 {
   if (!is_valid_pointer(f->esp +4, 4) || !is_valid_string(*(char **)(f->esp + 4))){
     return -1;
@@ -230,8 +214,7 @@ syscall_exec_wrapper(struct  intr_frame *f)
   return 0;
 }
 
-static int
-syscall_write_wrapper(struct  intr_frame *f)
+static int syscall_write_wrapper(struct  intr_frame *f)
 {
   if (!is_valid_pointer(f->esp + 4, 12)){
     return -1;
@@ -247,8 +230,7 @@ syscall_write_wrapper(struct  intr_frame *f)
   return 0;
 }
 
-static int
-syscall_read_wrapper(struct  intr_frame *f)
+static int syscall_read_wrapper(struct  intr_frame *f)
 {
   if (!is_valid_pointer(f->esp + 4, 12)){
     return -1;
@@ -264,14 +246,12 @@ syscall_read_wrapper(struct  intr_frame *f)
   return 0;
 }
 
-static void
-kill_program(void)
+static void kill_program(void)
 {
   thread_exit(-1);
 }
 
-static void
-syscall_handler (struct intr_frame *f)
+static void syscall_handler (struct intr_frame *f)
 {
 
   if (!is_valid_pointer(f->esp, 4)){
@@ -290,8 +270,7 @@ syscall_handler (struct intr_frame *f)
   }
 }
 
-void
-syscall_init (void)
+void syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   syscall_handlers[SYS_EXIT] = &syscall_exit_wrapper;

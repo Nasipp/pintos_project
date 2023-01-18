@@ -1,12 +1,12 @@
 Copying tests/userprog/no-vm/multi-oom to scratch partition...
-qemu-system-x86_64 -device isa-debug-exit -hda /tmp/w_62bLHkSu.dsk -m 4 -net none -nographic -monitor null
+qemu-system-x86_64 -device isa-debug-exit -hda /tmp/Ol1lAHxDFj.dsk -m 4 -net none -nographic -monitor null
 PiLo hda1
 Loading............
 Kernel command line: -q -f extract run multi-oom
 Pintos booting with 3,968 kB RAM...
 367 pages available in kernel pool.
 367 pages available in user pool.
-Calibrating timer...  527,564,800 loops/s.
+Calibrating timer...  520,192,000 loops/s.
 hda: 5,040 sectors (2 MB), model "QM00001", serial "QEMU HARDDISK"
 hda1: 207 sectors (103 kB), Pintos OS kernel (20)
 hda2: 4,096 sectors (2 MB), Pintos file system (21)
@@ -257,4 +257,4 @@ Interrupt 0x0e (#PF Page-Fault Exception) at eip=0x80481c9
  cs=001b ds=0023 es=0023 ss=0023
 multi-oom: exit(-1)
 
-TIMEOUT after 380 seconds of host CPU time
+TIMEOUT after 360 seconds of host CPU time

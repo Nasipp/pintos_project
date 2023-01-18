@@ -33,7 +33,6 @@ struct process_pid{
   int pid;
   struct list_elem elem;
 };
-
 void process_init(void)
 {
   ipc_init();
@@ -41,12 +40,41 @@ void process_init(void)
   list_init(&thread_current()->children);
 }
 
-/* Starts a new thread running a user program loaded from
-   FILENAME.  The new thread may be scheduled (and may even exit)
-   before process_execute() returns.  Returns the new process's
-   thread id, or TID_ERROR if the thread cannot be created. */
-pid_t
-process_execute (const char *file_name)
+static void start_process (void *file_name_)
+{
+
+  char *file_name = file_name_;
+
+  struct intr_frame if_;
+  bool success;
+
+  /* Initialize interrupt frame and load executable. */
+  memset (&if_, 0, sizeof if_);
+  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
+  if_.cs = SEL_UCSEG;
+  if_.eflags = FLAG_IF | FLAG_MBS;
+  success = load (file_name, &if_.eip, &if_.esp);
+
+  palloc_free_page (file_name);
+
+  /* If load failed, quit. */
+  if (!success){
+    ipc_pipe_write("exec", thread_tid(), -1);
+    thread_exit (-1);
+  }
+  ipc_pipe_write("exec", thread_tid(), thread_tid());  
+  
+  /* Start the user process by simulating a return from an
+     interrupt, implemented by intr_exit (in
+     threads/intr-stubs.S).  Because intr_exit takes all of its
+     arguments on the stack in the form of a `struct intr_frame',
+     we just point the stack pointer (%esp) to our stack frame
+     and jump to it. */
+  asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
+  NOT_REACHED ();
+}
+
+pid_t process_execute (const char *file_name)
 {
   char *fn_copy;
   pid_t tid;
@@ -88,40 +116,7 @@ process_execute (const char *file_name)
 
 /* A thread function that loads a user process and starts it
    running. */
-static void
-start_process (void *file_name_)
-{
 
-  char *file_name = file_name_;
-
-  struct intr_frame if_;
-  bool success;
-
-  /* Initialize interrupt frame and load executable. */
-  memset (&if_, 0, sizeof if_);
-  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
-  if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
-
-  palloc_free_page (file_name);
-
-  /* If load failed, quit. */
-  if (!success){
-    ipc_pipe_write("exec", thread_tid(), -1);
-    thread_exit (-1);
-  }
-  ipc_pipe_write("exec", thread_tid(), thread_tid());  
-  
-  /* Start the user process by simulating a return from an
-     interrupt, implemented by intr_exit (in
-     threads/intr-stubs.S).  Because intr_exit takes all of its
-     arguments on the stack in the form of a `struct intr_frame',
-     we just point the stack pointer (%esp) to our stack frame
-     and jump to it. */
-  asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
-  NOT_REACHED ();
-}
 
 static bool process_is_parent_of(pid_t pid){
   struct list_elem *e; 
@@ -156,8 +151,7 @@ static void remove_child(pid_t pid){
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int
-process_wait (pid_t child_tid)
+int process_wait (pid_t child_tid)
 {
   if(!process_is_parent_of(child_tid))
     return -1;
@@ -167,8 +161,7 @@ process_wait (pid_t child_tid)
 
 
 /* Free the current process's resources. */
-void
-process_exit (int status)
+void process_exit (int status)
 {
   struct thread *cur = thread_current();
   ipc_pipe_write("wait", cur->tid, status);
@@ -204,8 +197,7 @@ process_exit (int status)
 /* Sets up the CPU for running user code in the current
    thread.
    This function is called on every context switch. */
-void
-process_activate (void)
+void process_activate (void)
 {
   struct thread *thr = thread_current ();
 
@@ -290,8 +282,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
-bool
-load (const char *file_name, void (**eip) (void), void **esp)
+bool load (const char *file_name, void (**eip) (void), void **esp)
 {
 
   struct thread *t = thread_current ();
@@ -480,8 +471,7 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable)
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -527,8 +517,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
-static bool
-setup_stack (void **esp, char **argv, int argc)
+static bool setup_stack (void **esp, char **argv, int argc)
 {
   uint8_t *kpage;
   bool success = false;
@@ -578,8 +567,7 @@ setup_stack (void **esp, char **argv, int argc)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
-install_page (void *upage, void *kpage, bool writable)
+static bool install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *thr = thread_current ();
 
@@ -590,16 +578,14 @@ install_page (void *upage, void *kpage, bool writable)
 }
 
 
-static void
-extract_command_name(char * cmd_string, char *command_name)
+static void extract_command_name(char * cmd_string, char *command_name)
 {
   char *save_ptr;
   strlcpy (command_name, cmd_string, PGSIZE);
   command_name = strtok_r(command_name, " ", &save_ptr);
 }
 
-static void
-extract_command_args(char * cmd_string, char* argv[], int *argc)
+static void extract_command_args(char * cmd_string, char* argv[], int *argc)
 {
   char *save_ptr;
   argv[0] = strtok_r(cmd_string, " ", &save_ptr);
